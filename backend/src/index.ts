@@ -26,9 +26,6 @@ app.post(
     if (!errors.isEmpty()) {
       return res.status(400).json({ err: errors.array() });
     }
-    console.log("====================================");
-    console.log(req.body);
-    console.log("====================================");
     if (currentTimeout) {
       clearTimeout(currentTimeout);
     }
@@ -39,8 +36,6 @@ app.post(
           user.email.includes(email) &&
           (!number || user.number.includes(number))
       );
-      console.log(results);
-
       res.json(results);
     }, 5000);
   }

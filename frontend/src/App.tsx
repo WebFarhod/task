@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useRef, useState } from "react";
+import axios, { CancelTokenSource } from "axios";
 import InputMask from "react-input-mask";
 import "./App.css";
 
@@ -12,23 +12,39 @@ const App: React.FC = () => {
   const [number, setNumber] = useState<string>("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const cancelTokenRef = useRef<CancelTokenSource | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // if (axios.CancelToken.source) {
-      //   axios.CancelToken.source.cancel();
-      // }
-      const response = await axios.post("http://localhost:3000/search", {
-        email,
-        number: number.replace(/-/g, "").replace(/_/g, ""),
-      });
+      console.log("t", cancelTokenRef.current);
+      if (cancelTokenRef.current) {
+        cancelTokenRef.current.cancel("Operation canceled due to new request.");
+      }
+
+      cancelTokenRef.current = axios.CancelToken.source();
+
+      const response = await axios.post(
+        "http://localhost:3000/search",
+        {
+          email,
+          number: number.replace(/-/g, "").replace(/_/g, ""),
+        },
+        {
+          cancelToken: cancelTokenRef.current.token,
+        }
+      );
       setResults(response.data);
     } catch (error) {
-      console.error(error);
+      if (axios.isCancel(error)) {
+        console.log("Request canceled", error.message);
+      } else {
+        console.error(error);
+      }
     } finally {
       setLoading(false);
+      cancelTokenRef.current = null;
     }
   };
 
@@ -57,7 +73,6 @@ const App: React.FC = () => {
         </div>
         <button type="submit">Submit</button>
       </form>
-      {/* <div className="loader"></div> */}
       {loading && <div className="loader"></div>}
       <h2>Results:</h2>
       {results.length > 0 ? (
